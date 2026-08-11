@@ -4,6 +4,7 @@ using System.Collections.Generic;
 /// <summary>
 /// 对话系统状态机
 /// 管理对话流程：开始 → 单行打字 → 多行推进 → 选项分支 → 结束
+/// 集成 NPC 数据库 + 新手引导对话
 /// </summary>
 public class DialogueManager : MonoBehaviour
 {
@@ -23,48 +24,163 @@ public class DialogueManager : MonoBehaviour
     private float _typeTimer;
     private int _typeCharIndex;
 
-    private Dictionary<string, DialogueTreeData> _dialogueMap;
+    private Dictionary<string, List<DialogueTreeData>> _dialogueMap; // npcId → trees
+    private Dictionary<string, DialogueTreeData> _dialogueById;       // dialogueId → tree
+
+    // 新手引导对话队列
+    private Queue<(string npcId, string[] lines)> _tutorialQueue = new();
 
     void Awake()
     {
         Instance = this;
         _dialogueMap = new();
+        _dialogueById = new();
+
+        // 加载序列化数据库 + NPCDialogueTrees 工厂
+        if (dialogueDatabase == null) dialogueDatabase = new();
+        dialogueDatabase.AddRange(NPCDialogueTrees.BuildAll());
+
         foreach (var tree in dialogueDatabase)
         {
-            _dialogueMap[tree.npcId] = tree;
+            if (!_dialogueMap.ContainsKey(tree.npcId))
+                _dialogueMap[tree.npcId] = new List<DialogueTreeData>();
+            _dialogueMap[tree.npcId].Add(tree);
+
+            if (!string.IsNullOrEmpty(tree.dialogueId))
+                _dialogueById[tree.dialogueId] = tree;
         }
     }
 
-    /// <summary>开始对话</summary>
+    /// <summary>开始对话（按 npcId）</summary>
     public void StartDialogue(string npcId)
     {
-        if (!_dialogueMap.TryGetValue(npcId, out _currentTree))
+        StartDialogueById(npcId, null);
+    }
+
+    /// <summary>按 dialogueId 精确触发对话（心事件用）</summary>
+    public bool StartDialogueById(string npcId, string dialogueId)
+    {
+        DialogueTreeData targetTree = null;
+
+        if (!string.IsNullOrEmpty(dialogueId) && _dialogueById.TryGetValue(dialogueId, out targetTree))
         {
-            Debug.LogWarning($"未找到 NPC[{npcId}] 的对话数据");
-            return;
+            // 找到了精确的心事件对话
+        }
+        else if (_dialogueMap.TryGetValue(npcId, out var trees))
+        {
+            // 日常对话：按好感度选择
+            foreach (var tree in trees)
+            {
+                if (tree.dialogueId != null && tree.dialogueId.EndsWith("_daily"))
+                {
+                    // 找最适合好感度的日常对话节点
+                    targetTree = tree;
+                    break;
+                }
+            }
+
+            // 没有日常对话 → 取第一个可用树
+            if (targetTree == null && trees.Count > 0)
+                targetTree = trees[0];
         }
 
-        IsActive = true;
+        if (targetTree == null)
+        {
+            Debug.LogWarning($"未找到 NPC[{npcId}] 的对话数据");
+            return false;
+        }
+
+        _currentTree = targetTree;
         _currentNpcId = npcId;
+        IsActive = true;
         _currentNode = FindStartNode(_currentTree);
         _currentLineIndex = 0;
 
         if (_currentNode == null)
         {
             EndDialogue();
-            return;
+            return false;
         }
 
-        // 锁定输入和游戏状态
         InputManager.Instance.IsInputLocked = true;
         GameManager.Instance.SetState(GameState.Dialogue);
         EventBus.Publish(GameEvent.NPCDialogueStarted, npcId);
+        ShowCurrentLine();
+        return true;
+    }
 
-        // 显示第一行
+    /// <summary>新手引导对话（TutorialManager 调用）</summary>
+    public void QueueTutorialDialogue(string npcId, string[] lines)
+    {
+        _tutorialQueue.Enqueue((npcId, lines));
+    }
+
+    void Update()
+    {
+        // 处理新手引导对话队列
+        if (!IsActive && _tutorialQueue.Count > 0)
+        {
+            var (npcId, lines) = _tutorialQueue.Dequeue();
+            PlayTutorialDialogue(npcId, lines);
+            return;
+        }
+
+        if (!IsActive) return;
+
+        // 打字机效果
+        if (_isTyping)
+        {
+            _typeTimer += Time.deltaTime;
+            if (_typeTimer >= 0.03f)
+            {
+                _typeTimer -= 0.03f;
+                _typeCharIndex++;
+                if (_typeCharIndex >= GetCurrentLine().Length)
+                    _isTyping = false;
+                DialogueUI.Instance?.UpdateTypewriter(GetCurrentLine(), _typeCharIndex);
+            }
+        }
+
+        // 空格推进
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
+            Advance();
+    }
+
+    private void PlayTutorialDialogue(string npcId, string[] lines)
+    {
+        IsActive = true;
+        _currentNpcId = npcId;
+
+        // 获取 NPC 名字
+        string npcName = npcId;
+        if (NPCDatabase.BuildAll().TryGetValue(npcId, out var data))
+            npcName = data.npcName;
+
+        // 构建临时对话节点
+        _currentTree = new DialogueTreeData
+        {
+            dialogueId = $"tutorial_{npcId}",
+            npcId = npcId,
+            nodes = new()
+            {
+                new DialogueNode
+                {
+                    nodeId = "start",
+                    speakerName = npcName,
+                    lines = new List<string>(lines),
+                    nextNodeId = null
+                }
+            }
+        };
+
+        _currentNode = _currentTree.nodes[0];
+        _currentLineIndex = 0;
+
+        InputManager.Instance.IsInputLocked = true;
+        GameManager.Instance.SetState(GameState.Dialogue);
         ShowCurrentLine();
     }
 
-    /// <summary>找到最佳起始节点（根据条件过滤）</summary>
     private DialogueNode FindStartNode(DialogueTreeData tree)
     {
         foreach (var node in tree.nodes)
@@ -75,117 +191,67 @@ public class DialogueManager : MonoBehaviour
         return tree.nodes.Count > 0 ? tree.nodes[0] : null;
     }
 
-    void Update()
-    {
-        if (!IsActive) return;
-
-        // 打字机效果
-        if (_isTyping)
-        {
-            _typeTimer += Time.deltaTime;
-            if (_typeTimer >= 0.03f) // ~33 chars/sec
-            {
-                _typeTimer -= 0.03f;
-                _typeCharIndex++;
-                if (_typeCharIndex >= GetCurrentLine().Length)
-                {
-                    _isTyping = false;
-                }
-                DialogueUI.Instance?.UpdateTypewriter(GetCurrentLine(), _typeCharIndex);
-            }
-        }
-
-        // 空格推进对话
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
-            Advance();
-    }
-
-    private string GetCurrentLine()
-    {
-        return _currentNode.lines[_currentLineIndex];
-    }
+    private string GetCurrentLine() => _currentNode.lines[_currentLineIndex];
 
     private void ShowCurrentLine()
     {
         _isTyping = true;
         _typeCharIndex = 0;
         _typeTimer = 0f;
-
-        DialogueUI.Instance?.ShowLine(
-            _currentNode.speakerName,
-            GetCurrentLine()
-        );
+        DialogueUI.Instance?.ShowLine(_currentNode.speakerName, GetCurrentLine());
     }
 
-    /// <summary>推进对话</summary>
     public void Advance()
     {
         if (_isTyping)
         {
-            // 打字中 → 跳过打字，立即完成
             _isTyping = false;
             _typeCharIndex = GetCurrentLine().Length;
             DialogueUI.Instance?.UpdateTypewriter(GetCurrentLine(), _typeCharIndex);
             return;
         }
 
-        // 当前行完成
         _currentLineIndex++;
 
         if (_currentLineIndex < _currentNode.lines.Count)
         {
-            // 还有更多行
             ShowCurrentLine();
         }
         else
         {
-            // 节点结束
             ApplyNodeEffects();
 
             if (_currentNode.choices.Count > 0)
             {
-                // 有选项 → 显示选项
-                List<DialogueChoice> availableChoices = new();
+                var availableChoices = new List<DialogueChoice>();
                 foreach (var choice in _currentNode.choices)
-                {
                     if (AreConditionsMet(choice.conditions))
                         availableChoices.Add(choice);
-                }
                 DialogueUI.Instance?.ShowChoices(availableChoices);
             }
             else if (!string.IsNullOrEmpty(_currentNode.nextNodeId))
             {
-                // 无选项，跳转到下一节点
                 GoToNode(_currentNode.nextNodeId);
             }
             else
             {
-                // 对话结束
                 EndDialogue();
             }
         }
     }
 
-    /// <summary>选择选项</summary>
     public void SelectChoice(int index)
     {
-        if (_currentNode == null || index < 0 || index >= _currentNode.choices.Count)
-            return;
+        if (_currentNode == null || index < 0 || index >= _currentNode.choices.Count) return;
 
-        DialogueChoice choice = _currentNode.choices[index];
-
-        // 应用效果
-        foreach (var effect in choice.effects)
-            effect.Apply();
+        var choice = _currentNode.choices[index];
+        if (choice.effects != null)
+            foreach (var effect in choice.effects) effect.Apply();
 
         if (!string.IsNullOrEmpty(choice.nextNodeId))
-        {
             GoToNode(choice.nextNodeId);
-        }
         else
-        {
             EndDialogue();
-        }
     }
 
     private void GoToNode(string nodeId)
@@ -194,10 +260,7 @@ public class DialogueManager : MonoBehaviour
         foreach (var node in _currentTree.nodes)
         {
             if (node.nodeId == nodeId && AreConditionsMet(node.conditions))
-            {
-                nextNode = node;
-                break;
-            }
+            { nextNode = node; break; }
         }
 
         if (nextNode != null)
@@ -207,17 +270,13 @@ public class DialogueManager : MonoBehaviour
             ApplyNodeEffects();
             ShowCurrentLine();
         }
-        else
-        {
-            EndDialogue();
-        }
+        else EndDialogue();
     }
 
     private void ApplyNodeEffects()
     {
         if (_currentNode.effects == null) return;
-        foreach (var effect in _currentNode.effects)
-            effect.Apply();
+        foreach (var e in _currentNode.effects) e.Apply();
     }
 
     private bool AreConditionsMet(DialogueCondition[] conditions)
@@ -228,9 +287,11 @@ public class DialogueManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>结束对话</summary>
     public void EndDialogue()
     {
+        // 记下对话前的 npcId
+        string endedNpcId = _currentNpcId;
+
         IsActive = false;
         _currentNpcId = null;
         _currentTree = null;
@@ -240,6 +301,9 @@ public class DialogueManager : MonoBehaviour
         InputManager.Instance.IsInputLocked = false;
         GameManager.Instance.SetState(GameState.Playing);
         DialogueUI.Instance?.Hide();
-        EventBus.Publish(GameEvent.NPCDialogueEnded, _currentNpcId);
+        EventBus.Publish(GameEvent.NPCDialogueEnded, endedNpcId);
+
+        // 通知 TutorialManager
+        TutorialManager.Instance?.CompleteStep("tut_talk");
     }
 }
