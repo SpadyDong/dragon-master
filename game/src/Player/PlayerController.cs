@@ -128,6 +128,12 @@ public class PlayerController : MonoBehaviour
         _movementLocked = false;
     }
 
+    /// <summary>强制设置朝向（场景切换后出生点定位用）</summary>
+    public void SetFacingDirection(int dir)
+    {
+        FacingDirection = Mathf.Clamp(dir, 0, 3);
+    }
+
     /// <summary>传送到指定位置</summary>
     public void Teleport(Vector3 position)
     {

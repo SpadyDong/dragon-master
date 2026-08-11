@@ -25,6 +25,9 @@ public class GameManager : MonoBehaviour
     // 游戏状态
     public GameState CurrentState { get; private set; } = GameState.Playing;
 
+    // 当前场景
+    public string currentScene = "Town";
+
     // 每天的天数
     public const int DAYS_PER_SEASON = 28;
     public const int SEASONS_PER_YEAR = 4;
