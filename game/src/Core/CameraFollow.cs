@@ -16,7 +16,7 @@ public class CameraFollow : MonoBehaviour
     [Header("地图边界")]
     [SerializeField] private bool clampToBounds = true;
     [SerializeField] private Vector2 mapCenter = Vector2.zero;
-    [SerializeField] private Vector2 mapHalfSize = new Vector2(800, 928); // 50×58 tiles × 32px = 1600×1856
+    [SerializeField] private Vector2 mapHalfSize = new Vector2(2400, 1920); // 150×120 tiles × 32px = 4800×3840
 
     private Vector3 _velocity = Vector3.zero;
 

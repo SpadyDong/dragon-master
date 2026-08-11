@@ -17,8 +17,8 @@ public class MapPanel : MonoBehaviour
     [SerializeField] private RectTransform playerIndicator;
 
     [Header("世界尺寸")]
-    [Tooltip("世界地图 Tilemap 总尺寸（像素），50×58 tiles × 32px = 1600×1856")]
-    [SerializeField] private Vector2 mapWorldSize = new Vector2(1600, 1856);
+    [Tooltip("世界地图 Tilemap 总尺寸（像素），150×120 tiles × 32px = 4800×3840")]
+    [SerializeField] private Vector2 mapWorldSize = new Vector2(4800, 3840);
 
     [Header("指示器动画")]
     [SerializeField] private float pulseSpeed = 2f;
