@@ -18,7 +18,19 @@ public enum GameEvent
     // 物品
     ItemPickedUp, ItemUsed, InventoryChanged, EquipmentChanged, WeaponSwitched,
     // 游戏状态
-    GamePaused, GameResumed, GameStateChanged
+    GamePaused, GameResumed, GameStateChanged,
+    // 种植
+    FarmTileStateChanged,    // int tileIndex
+    CropPlanted,             // string cropId
+    CropHarvested,            // string cropId
+    SprinklerActivated,       // int sprinklerIndex
+    FruitTreeHarvested,       // string treeType
+    BeehiveHarvested,         // string honeyType
+    // 畜牧
+    AnimalFed,                // string animalId
+    AnimalPetted,             // string animalId
+    AnimalProductCollected,   // string productId
+    AnimalMoodChanged         // string animalId
 }
 
 /// <summary>

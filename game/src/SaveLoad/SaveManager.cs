@@ -38,8 +38,16 @@ public class SaveManager : MonoBehaviour
         public EquipmentManager.EquipmentSaveData equipment;
         // 任务
         public QuestSaveData quests;
+        // 种植
+        public List<FarmTile.FarmTileSaveData> farmTiles;
+        public List<FruitTree.FruitTreeSaveData> fruitTrees;
+        public List<Beehive.BeehiveSaveData> beehives;
+        // 畜牧
+        public List<AnimalController.AnimalSaveData> animals;
+        // 储物箱
+        public List<StorageChest.StorageSaveData> storageChests;
         // 版本标记
-        public string version = "0.1.0";
+        public string version = "0.2.0";
     }
 
     void Awake()
@@ -161,6 +169,19 @@ public class SaveManager : MonoBehaviour
         data.equipment = EquipmentManager.Instance?.GetSaveData();
         data.quests = QuestManager.Instance?.GetSaveData();
 
+        // 种植数据
+        if (FarmingManager.Instance != null)
+        {
+            data.farmTiles = FarmingManager.Instance.GetAllTiles()
+                .ConvertAll(t => t.GetSaveData());
+            data.fruitTrees = new List<FruitTree.FruitTreeSaveData>();
+            data.beehives = new List<Beehive.BeehiveSaveData>();
+        }
+
+        // 畜牧数据
+        if (LivestockManager.Instance != null)
+            data.animals = LivestockManager.Instance.GetAllSaveData();
+
         return data;
     }
 
@@ -182,6 +203,18 @@ public class SaveManager : MonoBehaviour
         InventoryManager.Instance?.LoadSaveData(data.inventory);
         EquipmentManager.Instance?.LoadSaveData(data.equipment);
         QuestManager.Instance?.LoadSaveData(data.quests);
+
+        // 恢复种植数据
+        if (data.farmTiles != null && FarmingManager.Instance != null)
+        {
+            var tiles = FarmingManager.Instance.GetAllTiles();
+            for (int i = 0; i < Mathf.Min(tiles.Count, data.farmTiles.Count); i++)
+                tiles[i].LoadSaveData(data.farmTiles[i]);
+        }
+
+        // 恢复畜牧数据
+        if (data.animals != null && LivestockManager.Instance != null)
+            LivestockManager.Instance.LoadAllSaveData(data.animals);
     }
 
     private string GetSlotPath(int slot) =>
