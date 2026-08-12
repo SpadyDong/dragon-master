@@ -121,4 +121,37 @@ public class InventorySlotUI : MonoBehaviour
             button.onClick.AddListener(() => onClick(_index));
         }
     }
+
+    /// <summary>设置图标</summary>
+    public void SetIcon(Sprite sprite)
+    {
+        if (icon != null)
+        {
+            icon.sprite = sprite;
+            icon.gameObject.SetActive(sprite != null);
+        }
+    }
+
+    /// <summary>设置数量</summary>
+    public void SetCount(int count)
+    {
+        if (countText != null)
+        {
+            countText.text = count > 1 ? count.ToString() : "";
+            countText.gameObject.SetActive(count > 1);
+        }
+    }
+
+    /// <summary>设置为空槽位占位符</summary>
+    public void SetEmpty(int index)
+    {
+        _index = index;
+        if (icon != null) icon.gameObject.SetActive(false);
+        if (countText != null) countText.gameObject.SetActive(false);
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => { }); // 空槽点击无操作
+        }
+    }
 }

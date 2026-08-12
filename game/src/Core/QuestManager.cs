@@ -56,6 +56,16 @@ public class QuestManager : MonoBehaviour
     /// <summary>获取任务数据</summary>
     public QuestData GetQuest(string questId) => _allQuests.TryGetValue(questId, out var q) ? q : null;
 
+    /// <summary>获取所有任务数据（供 UI 面板使用）</summary>
+    public List<QuestData> GetAllQuestData() => _allQuests.Values.ToList();
+
+    /// <summary>获取任务进度数据（供 UI 面板使用）</summary>
+    public int[] GetProgress(string questId)
+    {
+        if (!_progress.TryGetValue(questId, out var p)) return null;
+        return p.objectiveProgress;
+    }
+
     /// <summary>获取任务状态</summary>
     public QuestState GetState(string questId) => _progress.TryGetValue(questId, out var p) ? p.state : QuestState.Locked;
 

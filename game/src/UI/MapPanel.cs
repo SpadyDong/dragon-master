@@ -70,6 +70,14 @@ public class MapPanel : MonoBehaviour
             mapPanel.SetActive(false);
     }
 
+    /// <summary>由 UIManager 调用刷新地图</summary>
+    public void RefreshMap()
+    {
+        if (mapPanel != null && !mapPanel.activeSelf)
+            mapPanel.SetActive(true);
+        _isOpen = true;
+    }
+
     private void UpdatePlayerIndicator()
     {
         if (playerIndicator == null || mapImage == null) return;

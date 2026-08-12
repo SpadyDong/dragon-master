@@ -34,6 +34,10 @@ public class SaveManager : MonoBehaviour
         public int strength, agility, vitality, intelligence;
         // 背包
         public InventoryManager.InventorySaveData inventory;
+        // 装备
+        public EquipmentManager.EquipmentSaveData equipment;
+        // 任务
+        public QuestSaveData quests;
         // 版本标记
         public string version = "0.1.0";
     }
@@ -154,6 +158,8 @@ public class SaveManager : MonoBehaviour
         }
 
         data.inventory = InventoryManager.Instance?.GetSaveData();
+        data.equipment = EquipmentManager.Instance?.GetSaveData();
+        data.quests = QuestManager.Instance?.GetSaveData();
 
         return data;
     }
@@ -174,6 +180,8 @@ public class SaveManager : MonoBehaviour
             pc.Teleport(new Vector3(data.playerPosX, data.playerPosY, 0));
 
         InventoryManager.Instance?.LoadSaveData(data.inventory);
+        EquipmentManager.Instance?.LoadSaveData(data.equipment);
+        QuestManager.Instance?.LoadSaveData(data.quests);
     }
 
     private string GetSlotPath(int slot) =>

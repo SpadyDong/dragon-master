@@ -8,6 +8,7 @@ public enum ItemType
     Consumable,     // 消耗品（食物、药水）
     Weapon,         // 武器
     Armor,          // 防具
+    Accessory,      // 饰品
     Seed,           // 种子
     Tool,           // 工具（锄头、洒水器等）
     Material,       // 材料（矿石、木材等）
@@ -36,4 +37,10 @@ public class ItemData : ScriptableObject
     public int staminaRestore;
     public int hpRestore;
     public int hungerRestore;
+
+    // 装备属性（武器/防具/饰品有效）
+    public int attackBonus;
+    public int defenseBonus;
+    public int speedBonus;
+    public int magicBonus;
 }
