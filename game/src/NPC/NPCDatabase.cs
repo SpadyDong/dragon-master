@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// NPC 数据库工厂
-/// 运行时创建全部 41 名常驻 NPC 的完整数据
+/// 运行时创建全部 40 名常驻 NPC 的完整数据
 /// 在游戏初始化时调用 NPCDatabase.BuildAll()
 /// </summary>
 public static class NPCDatabase
