@@ -36,32 +36,48 @@ public class QuickSlotBar : MonoBehaviour
 
         EventBus.Subscribe(GameEvent.EquipmentChanged, Refresh);
         EventBus.Subscribe<string>(GameEvent.InventoryChanged, _ => Refresh());
+        EventBus.Subscribe<int>(GameEvent.WeaponSwitched, OnWeaponSwitched);
 
         Refresh();
     }
 
     void Update()
     {
-        // 数字键 1-8 切换
+        // 数字键 1-8 切换：前 3 个为武器槽
         for (int i = 0; i < slotCount; i++)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1 + i))
             {
+                if (i < 3)
+                {
+                    // 武器槽(0-2)：切换当前武器
+                    EquipmentManager.Instance?.SwitchToWeapon(i);
+                }
                 SelectSlot(i);
             }
         }
 
-        // 滚轮切换
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll > 0f)
-            SelectSlot((_selectedIndex - 1 + slotCount) % slotCount);
-        else if (scroll < 0f)
-            SelectSlot((_selectedIndex + 1) % slotCount);
+        // 滚轮切换武器（仅在非 UI 锁定状态下）
+        if (!InputManager.Instance.IsInputLocked)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0f)
+                EquipmentManager.Instance?.SwitchWeapon(-1);
+            else if (scroll < 0f)
+                EquipmentManager.Instance?.SwitchWeapon(1);
+        }
     }
 
     void OnDestroy()
     {
         EventBus.Unsubscribe(GameEvent.EquipmentChanged, Refresh);
+        EventBus.Unsubscribe<int>(GameEvent.WeaponSwitched, OnWeaponSwitched);
+    }
+
+    /// <summary>武器切换回调 — 同步快捷栏选中高亮</summary>
+    private void OnWeaponSwitched(int weaponIndex)
+    {
+        SelectSlot(weaponIndex);
     }
 
     /// <summary>选择槽位</summary>
@@ -131,6 +147,16 @@ public class QuickSlotBar : MonoBehaviour
     {
         if (quickSlots == null) return;
 
+        // 前 3 个槽位自动同步装备的武器
+        if (EquipmentManager.Instance != null)
+        {
+            var weaponSlots = EquipmentManager.Instance.GetWeaponSlots();
+            for (int i = 0; i < 3 && i < quickSlots.Length; i++)
+            {
+                assignedItemIds[i] = weaponSlots[i].itemId;
+            }
+        }
+
         for (int i = 0; i < quickSlots.Length && i < slotCount; i++)
         {
             if (quickSlots[i] == null) continue;
@@ -138,9 +164,18 @@ public class QuickSlotBar : MonoBehaviour
             string itemId = (assignedItemIds != null && i < assignedItemIds.Length)
                 ? assignedItemIds[i] : null;
 
-            // 检查物品是否还在背包中
-            if (!string.IsNullOrEmpty(itemId) && !InventoryManager.Instance.HasItem(itemId, 1))
+            // 检查物品是否还在背包（非武器槽才检查）
+            if (i >= 3 && !string.IsNullOrEmpty(itemId) && !InventoryManager.Instance.HasItem(itemId, 1))
                 itemId = null;
+
+            // 武器槽：检查是否仍在装备中
+            if (i < 3 && !string.IsNullOrEmpty(itemId))
+            {
+                string equippedId = EquipmentManager.Instance?.GetEquippedItemId((EquipmentSlotType)i);
+                if (equippedId != itemId)
+                    itemId = equippedId;
+                assignedItemIds[i] = itemId;
+            }
 
             var item = string.IsNullOrEmpty(itemId) ? null : Resources.Load<ItemData>($"Items/{itemId}");
             quickSlots[i].Setup(itemId, item?.icon, i == _selectedIndex);

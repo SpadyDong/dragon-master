@@ -16,7 +16,7 @@ public enum GameEvent
     // NPC
     NPCDialogueStarted, NPCDialogueEnded, NPCAffectionChanged,
     // 物品
-    ItemPickedUp, ItemUsed, InventoryChanged, EquipmentChanged,
+    ItemPickedUp, ItemUsed, InventoryChanged, EquipmentChanged, WeaponSwitched,
     // 游戏状态
     GamePaused, GameResumed, GameStateChanged
 }

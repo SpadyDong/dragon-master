@@ -213,14 +213,22 @@ public class InventoryPanel : MonoBehaviour
         if (item == null) return;
 
         // 根据物品类型自动选择槽位
-        EquipmentSlotType slot = item.type switch
+        EquipmentSlotType slot;
+        if (item.type == ItemType.Weapon)
         {
-            ItemType.Weapon => EquipmentSlotType.Weapon,
-            ItemType.Tool => EquipmentSlotType.Weapon,
-            ItemType.Armor => DetermineArmorSlot(item),
-            ItemType.Accessory => EquipmentSlotType.Accessory1,
-            _ => EquipmentSlotType.Weapon
-        };
+            // 武器按子类型路由到对应槽位
+            slot = EquipmentManager.GetSlotForWeapon(item.weaponSubType);
+        }
+        else
+        {
+            slot = item.type switch
+            {
+                ItemType.Tool => EquipmentSlotType.Sword, // 工具→单手剑槽
+                ItemType.Armor => DetermineArmorSlot(item),
+                ItemType.Accessory => EquipmentSlotType.Accessory1,
+                _ => EquipmentSlotType.Sword
+            };
+        }
 
         if (EquipmentManager.Instance != null)
         {

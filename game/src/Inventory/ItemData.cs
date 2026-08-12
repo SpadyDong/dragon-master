@@ -17,6 +17,17 @@ public enum ItemType
 }
 
 /// <summary>
+/// 武器子类型 — 决定装备到哪个武器槽
+/// </summary>
+public enum WeaponSubType
+{
+    None,        // 非武器
+    Sword,       // 单手剑
+    Greatsword,  // 大剑/双手剑
+    Bow          // 弓箭
+}
+
+/// <summary>
 /// 物品数据 — Unity 中创建为 ScriptableObject
 /// 用法：Assets → Create → Item → Item Data
 /// </summary>
@@ -43,4 +54,7 @@ public class ItemData : ScriptableObject
     public int defenseBonus;
     public int speedBonus;
     public int magicBonus;
+
+    // 武器子类型（仅 Weapon 类有效）
+    public WeaponSubType weaponSubType = WeaponSubType.None;
 }

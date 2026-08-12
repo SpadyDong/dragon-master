@@ -3,28 +3,44 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// 装备面板 — 6 个装备槽 + 属性总览
+/// 装备面板 — 8 个装备槽（3武器 + 3防具 + 2饰品）+ 属性总览
 /// </summary>
 public class EquipmentPanel : MonoBehaviour
 {
-    [Header("装备槽")]
-    [SerializeField] private EquipmentSlotUI[] equipmentSlots; // 6个槽位（Inspector 拖入）
+    [Header("装备槽 — 武器")]
+    [SerializeField] private EquipmentSlotUI swordSlot;
+    [SerializeField] private EquipmentSlotUI greatswordSlot;
+    [SerializeField] private EquipmentSlotUI bowSlot;
+
+    [Header("装备槽 — 防具/饰品")]
+    [SerializeField] private EquipmentSlotUI helmetSlot;
+    [SerializeField] private EquipmentSlotUI armorSlot;
+    [SerializeField] private EquipmentSlotUI bootsSlot;
+    [SerializeField] private EquipmentSlotUI accessory1Slot;
+    [SerializeField] private EquipmentSlotUI accessory2Slot;
+
+    [Header("当前武器高亮")]
+    [SerializeField] private Image weaponHighlight;
 
     [Header("属性总览")]
     [SerializeField] private TextMeshProUGUI statsText;
     [SerializeField] private TextMeshProUGUI playerLevelText;
+    [SerializeField] private TextMeshProUGUI currentWeaponText;
 
-    [Header("玩家预览")]
-    [SerializeField] private Image playerPortrait;
+    private EquipmentSlotUI[] _allSlots;
 
     void Start()
     {
+        _allSlots = new[] { swordSlot, greatswordSlot, bowSlot, helmetSlot, armorSlot, bootsSlot, accessory1Slot, accessory2Slot };
+
         EventBus.Subscribe(GameEvent.EquipmentChanged, Refresh);
+        EventBus.Subscribe<int>(GameEvent.WeaponSwitched, OnWeaponSwitched);
     }
 
     void OnDestroy()
     {
         EventBus.Unsubscribe(GameEvent.EquipmentChanged, Refresh);
+        EventBus.Unsubscribe<int>(GameEvent.WeaponSwitched, OnWeaponSwitched);
     }
 
     /// <summary>刷新装备面板</summary>
@@ -32,19 +48,70 @@ public class EquipmentPanel : MonoBehaviour
     {
         if (EquipmentManager.Instance == null) return;
 
-        // 更新 6 个装备槽
         var slots = EquipmentManager.Instance.GetAllSlots();
-        if (equipmentSlots != null)
-        {
-            for (int i = 0; i < equipmentSlots.Length && i < slots.Length; i++)
-            {
-                var slotType = (EquipmentSlotType)i;
-                if (equipmentSlots[i] != null)
-                    equipmentSlots[i].Setup(slotType, slots[i].itemId, OnSlotClicked);
-            }
-        }
+
+        // 武器槽（0-2）
+        SetupSlot(swordSlot, EquipmentSlotType.Sword, 0);
+        SetupSlot(greatswordSlot, EquipmentSlotType.Greatsword, 1);
+        SetupSlot(bowSlot, EquipmentSlotType.Bow, 2);
+
+        // 防具槽（3-5）
+        SetupSlot(helmetSlot, EquipmentSlotType.Helmet, 3);
+        SetupSlot(armorSlot, EquipmentSlotType.Armor, 4);
+        SetupSlot(bootsSlot, EquipmentSlotType.Boots, 5);
+
+        // 饰品槽（6-7）
+        SetupSlot(accessory1Slot, EquipmentSlotType.Accessory1, 6);
+        SetupSlot(accessory2Slot, EquipmentSlotType.Accessory2, 7);
+
+        // 更新当前武器高亮
+        UpdateWeaponHighlight();
 
         // 更新属性总览
+        UpdateStats();
+    }
+
+    private void SetupSlot(EquipmentSlotUI slotUI, EquipmentSlotType type, int index)
+    {
+        if (slotUI == null) return;
+        var slots = EquipmentManager.Instance.GetAllSlots();
+        string itemId = (index < slots.Length) ? slots[index].itemId : null;
+        slotUI.Setup(type, itemId, OnSlotClicked);
+    }
+
+    private void UpdateWeaponHighlight()
+    {
+        if (weaponHighlight == null || EquipmentManager.Instance == null) return;
+
+        int currentIdx = EquipmentManager.Instance.CurrentWeaponIndex;
+        EquipmentSlotUI targetSlot = currentIdx switch
+        {
+            0 => swordSlot,
+            1 => greatswordSlot,
+            2 => bowSlot,
+            _ => null
+        };
+
+        if (targetSlot != null)
+        {
+            weaponHighlight.rectTransform.position = targetSlot.transform.position;
+            weaponHighlight.gameObject.SetActive(true);
+        }
+
+        // 更新当前武器名
+        if (currentWeaponText != null)
+        {
+            var weapon = EquipmentManager.Instance.GetCurrentWeaponData();
+            string slotName = EquipmentManager.GetSlotName((EquipmentSlotType)currentIdx);
+            currentWeaponText.text = weapon != null
+                ? $"当前: {slotName} — {weapon.itemName}  ATK:{weapon.attackBonus}"
+                : $"当前: {slotName} — 空";
+        }
+    }
+
+    private void OnWeaponSwitched(int index)
+    {
+        UpdateWeaponHighlight();
         UpdateStats();
     }
 
@@ -55,16 +122,20 @@ public class EquipmentPanel : MonoBehaviour
         var eq = EquipmentManager.Instance;
         var ps = PlayerStats.Instance;
 
-        int atk = eq.GetAttackBonus();
+        int totalAtk = eq.GetAttackBonus();
+        int currentAtk = eq.GetCurrentWeaponAttack();
         int def = eq.GetDefenseBonus();
+
         int baseAtk = ps != null ? ps.Strength * 2 : 5;
         int baseDef = ps != null ? ps.Vitality : 5;
 
         string stats = $"<b>—— 属性总览 ——</b>\n\n";
-        stats += $"攻击力:  {baseAtk}  <color=#FFAA00>+{atk}</color>  =  {baseAtk + atk}\n";
+        stats += $"基础攻击力:  {baseAtk}\n";
+        stats += $"当前武器:  <color=#FF6600>+{currentAtk}</color>\n";
+        stats += $"全部装备攻击:  <color=#FFAA00>+{totalAtk}</color>\n";
         stats += $"防御力:  {baseDef}  <color=#00AAFF>+{def}</color>  =  {baseDef + def}\n";
 
-        // 从装备中采集速度和魔法加成
+        // 采集速度和魔法加成
         int spd = 0, mag = 0;
         foreach (var slot in eq.GetAllSlots())
         {
@@ -97,7 +168,6 @@ public class EquipmentPanel : MonoBehaviour
 
     private void OnSlotClicked(EquipmentSlotType slotType)
     {
-        // 点击有装备的槽位：卸下
         var eq = EquipmentManager.Instance;
         if (eq == null) return;
 
@@ -112,6 +182,7 @@ public class EquipmentPanel : MonoBehaviour
 /// <summary>
 /// 单个装备槽 UI
 /// </summary>
+[System.Serializable]
 public class EquipmentSlotUI : MonoBehaviour
 {
     [SerializeField] private Image icon;
@@ -140,14 +211,12 @@ public class EquipmentSlotUI : MonoBehaviour
 
         if (string.IsNullOrEmpty(equippedItemId))
         {
-            // 空槽
             if (icon != null) icon.sprite = emptySlotSprite;
             if (itemNameText != null) itemNameText.text = "空";
             if (background != null) background.color = emptyColor;
         }
         else
         {
-            // 已装备
             var item = Resources.Load<ItemData>($"Items/{equippedItemId}");
             if (icon != null) icon.sprite = item?.icon;
             if (itemNameText != null) itemNameText.text = item?.itemName ?? equippedItemId;
