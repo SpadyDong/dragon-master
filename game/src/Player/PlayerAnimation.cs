@@ -1,20 +1,19 @@
 using UnityEngine;
 
 /// <summary>
-/// 玩家方向动画控制器
-/// 管理 4 方向 Sprite 切换（通过 Animator 参数或直接切换 Sprite）
-/// 简洁版：不依赖 Animator Controller，直接通过 SpriteRenderer 切换
+/// 玩家 8 方向动画控制器
+/// 通过 SpriteRenderer 切换精灵，支持上下左右 + 四斜向（斜向复用主轴精灵+翻转）
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class PlayerAnimation : MonoBehaviour
 {
-    [Header("4 方向精灵")]
-    [SerializeField] private Sprite idleDown;
-    [SerializeField] private Sprite idleUp;
-    [SerializeField] private Sprite idleLeft;
-    [SerializeField] private Sprite idleRight;
+    [Header("8 方向 Idle 精灵（斜向可不填，自动复用主轴精灵）")]
+    [SerializeField] private Sprite idleDown;      // 0
+    [SerializeField] private Sprite idleUp;        // 1
+    [SerializeField] private Sprite idleLeft;      // 2
+    [SerializeField] private Sprite idleRight;     // 3
 
-    [Header("移动精灵（可选，不设置则用 idle + 翻转）")]
+    [Header("移动帧（每方向2帧，斜向复用主轴帧）")]
     [SerializeField] private Sprite walkDown1;
     [SerializeField] private Sprite walkDown2;
     [SerializeField] private Sprite walkUp1;
@@ -48,71 +47,49 @@ public class PlayerAnimation : MonoBehaviour
         bool isMoving = !_player.IsMovementLocked && InputManager.Instance != null
             && InputManager.Instance.GetMoveInput().magnitude > 0.1f;
 
-        // 方向变化时重置
-        if (dir != _lastDirection)
-        {
-            _walkFrame = 0;
-            _frameTimer = 0f;
-            _lastDirection = dir;
-        }
-
-        // 静止/移动切换时重置
-        if (isMoving != _wasMoving)
-        {
-            _walkFrame = 0;
-            _frameTimer = 0f;
-            _wasMoving = isMoving;
-        }
+        if (dir != _lastDirection) { _walkFrame = 0; _frameTimer = 0f; _lastDirection = dir; }
+        if (isMoving != _wasMoving) { _walkFrame = 0; _frameTimer = 0f; _wasMoving = isMoving; }
 
         if (isMoving)
         {
             _frameTimer += Time.deltaTime;
-            if (_frameTimer >= walkFrameInterval)
-            {
-                _frameTimer -= walkFrameInterval;
-                _walkFrame = (_walkFrame + 1) % 2;
-            }
+            if (_frameTimer >= walkFrameInterval) { _frameTimer -= walkFrameInterval; _walkFrame = (_walkFrame + 1) % 2; }
 
-            _sr.sprite = dir switch
+            (_sr.sprite, _sr.flipX) = dir switch
             {
-                0 => (_walkFrame == 0 && walkDown1 != null) ? walkDown1 : (walkDown2 ?? idleDown),
-                1 => (_walkFrame == 0 && walkUp1 != null) ? walkUp1 : (walkUp2 ?? idleUp),
-                2 => (_walkFrame == 0 && walkLeft1 != null) ? walkLeft1 : (walkLeft2 ?? idleLeft),
-                3 => (_walkFrame == 0 && walkRight1 != null) ? walkRight1 : (walkRight2 ?? idleRight),
-                _ => idleDown
+                0 => (PickWalk(walkDown1, walkDown2, idleDown), false),
+                1 => (PickWalk(walkUp1, walkUp2, idleUp), false),
+                2 => (PickWalk(walkLeft1, walkLeft2, idleLeft) ?? PickWalk(walkRight1, walkRight2, idleRight), walkLeft1 == null),
+                3 => (PickWalk(walkRight1, walkRight2, idleRight), false),
+                // 斜向：复用主轴精灵 + 翻转（左向斜向 flipX=true）
+                4 => (PickWalk(walkDown1, walkDown2, idleDown), true),          // 左下 → 复用下、翻转
+                5 => (PickWalk(walkDown1, walkDown2, idleDown), false),         // 右下 → 复用下
+                6 => (PickWalk(walkUp1, walkUp2, idleUp), false),               // 右上 → 复用上
+                7 => (PickWalk(walkUp1, walkUp2, idleUp), true),                // 左上 → 复用上、翻转
+                _ => (idleDown, false)
             };
-
-            // 左方向翻转（当没有左向精灵时，翻转右向精灵）
-            if (dir == 2)
-            {
-                _sr.flipX = (walkLeft1 == null);
-            }
-            else
-            {
-                _sr.flipX = false;
-            }
         }
         else
         {
-            _sr.sprite = dir switch
+            (_sr.sprite, _sr.flipX) = dir switch
             {
-                0 => idleDown,
-                1 => idleUp,
-                2 => idleLeft ?? idleRight,
-                3 => idleRight,
-                _ => idleDown
+                0 => (idleDown, false),
+                1 => (idleUp, false),
+                2 => (idleLeft ?? idleRight, idleLeft == null),
+                3 => (idleRight, false),
+                4 => (idleDown, true),
+                5 => (idleDown, false),
+                6 => (idleUp, false),
+                7 => (idleUp, true),
+                _ => (idleDown, false)
             };
-
-            _sr.flipX = (dir == 2 && idleLeft == null);
         }
     }
 
-    /// <summary>设置 Idle 精灵</summary>
-    public void SetIdleSprites(Sprite down, Sprite up, Sprite left, Sprite right)
+    private Sprite PickWalk(Sprite w1, Sprite w2, Sprite fallback)
     {
-        idleDown = down;
-        idleUp = up;
-        idleLeft = left;
-        idleRight = right;
+        if (_walkFrame == 0 && w1 != null) return w1;
+        if (_walkFrame == 1 && w2 != null) return w2;
+        return fallback;
     }
 }

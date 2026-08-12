@@ -29,7 +29,7 @@ public class PlayerController : MonoBehaviour
     private static readonly int IsRunning = Animator.StringToHash("IsRunning");
     private static readonly int FacingDir = Animator.StringToHash("FacingDir");
 
-    /// <summary>玩家当前朝向（0=下,1=上,2=左,3=右）</summary>
+    /// <summary>玩家当前朝向（0=下,1=上,2=左,3=右, 4=左下,5=右下,6=右上,7=左上）</summary>
     public int FacingDirection { get; private set; }
 
     /// <summary>移动是否被锁定</summary>
@@ -105,7 +105,18 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateFacingDirection(Vector2 dir)
     {
-        if (Mathf.Abs(dir.y) > Mathf.Abs(dir.x))
+        float absX = Mathf.Abs(dir.x);
+        float absY = Mathf.Abs(dir.y);
+
+        // 8 方向判定：斜向阈值 0.3（W+D 时 x≈0.71, y≈0.71，两者都>0.3 → 斜向）
+        bool diagonal = absX > 0.3f && absY > 0.3f;
+
+        if (diagonal)
+        {
+            if (dir.x > 0)  FacingDirection = dir.y > 0 ? 6 : 5; // 右上=6, 右下=5
+            else            FacingDirection = dir.y > 0 ? 7 : 4; // 左上=7, 左下=4
+        }
+        else if (absY > absX)
         {
             FacingDirection = dir.y > 0 ? 1 : 0; // 上=1, 下=0
         }
@@ -128,10 +139,10 @@ public class PlayerController : MonoBehaviour
         _movementLocked = false;
     }
 
-    /// <summary>强制设置朝向（场景切换后出生点定位用）</summary>
+    /// <summary>强制设置朝向（0-7，场景切换出生点定位用）</summary>
     public void SetFacingDirection(int dir)
     {
-        FacingDirection = Mathf.Clamp(dir, 0, 3);
+        FacingDirection = Mathf.Clamp(dir, 0, 7);
     }
 
     /// <summary>传送到指定位置</summary>
@@ -140,15 +151,19 @@ public class PlayerController : MonoBehaviour
         _rb.position = position;
     }
 
-    /// <summary>获取玩家前方一点（交互用）</summary>
+    /// <summary>获取玩家前方一点（交互用 · 8 方向）</summary>
     public Vector2 GetFrontPosition(float distance = 1f)
     {
         Vector2 dir = FacingDirection switch
         {
-            0 => Vector2.down,
-            1 => Vector2.up,
-            2 => Vector2.left,
-            3 => Vector2.right,
+            0 => Vector2.down,      // 下
+            1 => Vector2.up,        // 上
+            2 => Vector2.left,      // 左
+            3 => Vector2.right,     // 右
+            4 => new Vector2(-0.707f, -0.707f), // 左下
+            5 => new Vector2(0.707f, -0.707f),  // 右下
+            6 => new Vector2(0.707f, 0.707f),   // 右上
+            7 => new Vector2(-0.707f, 0.707f),  // 左上
             _ => Vector2.down
         };
         return _rb.position + dir * distance;
