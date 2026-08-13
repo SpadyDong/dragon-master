@@ -108,7 +108,10 @@ public static class DialogueConditionChecker
                 return GameManager.Instance.season == value;
             case DialogueConditionType.WeatherIs:
                 return GameManager.Instance.weatherIndex == value;
-            // 后续 M6-M11 补充 AffectionAtLeast, HasItem, QuestProgress 等
+            case DialogueConditionType.AffectionAtLeast:
+                // param = npcId, value = 阈值
+                return PlayerAffectionManager.Instance != null &&
+                       PlayerAffectionManager.Instance.GetAffection(param) >= value;
             default:
                 return true; // 临时通过所有未实现条件
         }
@@ -127,8 +130,11 @@ public static class DialogueEffectApplier
             case DialogueEffectType.None:
                 break;
             case DialogueEffectType.ChangeAffection:
-                // 后续 M6 实现好感度系统
-                EventBus.Publish(GameEvent.NPCAffectionChanged, value);
+                // param = npcId, value = 变化量
+                if (PlayerAffectionManager.Instance != null)
+                    PlayerAffectionManager.Instance.ChangeAffection(param, value);
+                else
+                    EventBus.Publish(GameEvent.NPCAffectionChanged, value);
                 break;
             case DialogueEffectType.TriggerEvent:
                 EventBus.Publish(GameEvent.PlayerInteracted, param);

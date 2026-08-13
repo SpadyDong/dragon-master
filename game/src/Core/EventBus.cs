@@ -30,7 +30,72 @@ public enum GameEvent
     AnimalFed,                // string animalId
     AnimalPetted,             // string animalId
     AnimalProductCollected,   // string productId
-    AnimalMoodChanged         // string animalId
+    AnimalMoodChanged,        // string animalId
+    // 驯龙
+    DragonStageChanged,      // string dragonUid
+    DragonFed,                // string dragonUid
+    DragonPetted,             // string dragonUid
+    DragonEggLaid,            // string dragonUid
+    DragonHatched,            // string dragonUid
+    DragonCaptured,           // string dragonSpeciesId
+    // 钓鱼
+    FishCaught,               // string fishId
+    FishingStarted,            // int spotId
+    FishingEnded,              // bool success
+    FishPondHarvested,         // string fishId
+    // 地形
+    TerrainChanged,            // int terrainIndex
+    // 元素反应
+    ElementReactionTriggered,  // string reactionName
+    // 玩家元素
+    PlayerElementChanged,      // int elementIndex (-1=null)
+    // 商店
+    ShopOpened,                // string shopId
+    ShopClosed,                // string shopId
+    ItemBought,                // string itemId
+    ItemSold,                  // string itemId
+    EquipmentForged,           // string resultItemId
+    // 战斗 — M9
+    BattleStarted,             // string battleType
+    BattleEnded,               // string result ("victory"/"defeat")
+    TurnChanged,               // int turnCount
+    UnitDamaged,               // string logMessage
+    UnitDefeated,              // string unitId
+    CaptureAttempted,          // string unitId
+    CaptureSuccess,            // string unitId
+    // 熟练度 — M10
+    ProficiencyLeveledUp,      // int skillIndex
+    ProficiencyXPChanged,      // int skillIndex
+    // 烹饪 — M10
+    RecipeLearned,             // string recipeId
+    DishCooked,                // string recipeId
+    // 矿洞 — M10
+    OreMined,                  // string oreId
+    FloorDescended,            // int floor
+    // 成就 — M10
+    AchievementUnlocked,       // string achievementId
+    // 温泉 — M10
+    HotSpringUsed,             // 无参数
+    // 菜市场 — M10.5
+    MarketPriceUpdated,        // 无参数
+    // 工匠设备 — M10.5
+    ArtisanJobCompleted,       // string outputItemId
+    // 结婚 — M6
+    MarriageProposed,          // string npcId
+    Married,                   // string npcId
+    // 节日 — M10
+    FestivalStarted,           // string festivalId
+    // 社区中心 — M10
+    BundleCompleted,           // string bundleId
+    // 博物馆 — M10
+    MuseumDonated,             // string itemId
+    // 秘密纸条 — M10
+    NoteFound,                 // int noteId
+    // 主线剧情 — M11
+    StoryNodeCompleted,        // string nodeName
+    RelicCollected,            // string relicName
+    StoryActChanged,           // int actIndex
+    EndingResolved             // string endingName
 }
 
 /// <summary>

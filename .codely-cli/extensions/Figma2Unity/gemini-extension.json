@@ -1,0 +1,5 @@
+{
+  "name": "Figma2Unity",
+  "version": "1.0.0",
+  "description": "Figma2Unity 是一款 Figma → Unity (UGUI) 高保真导入工具，支持高保真渲染（Figmage 烘焙 + Vector PNG Fallback + Sprite Atlas）、增量同步、原型流（Fade 过渡 + Section 多起点路由）、Google Fonts、离线缓存，并通过 AI Agent 技能实现自然语言驱动的自动化导入。"
+}

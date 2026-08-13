@@ -8,12 +8,14 @@ using System.Collections.Generic;
 /// </summary>
 public enum MenuTab
 {
-    Inventory,   // 背包
-    Equipment,   // 装备
-    Map,         // 地图
-    Quests,      // 任务
-    Relations,   // 好感度
-    Settings     // 设置
+    Inventory,    // 背包
+    Equipment,    // 装备
+    Map,          // 地图
+    Quests,       // 任务
+    Relations,    // 好感度
+    Proficiency,  // 熟练度
+    Achievements, // 成就
+    Settings      // 设置
 }
 
 /// <summary>
@@ -35,7 +37,22 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject mapPanel;
     [SerializeField] private GameObject questPanel;
     [SerializeField] private GameObject relationshipPanel;
+    [SerializeField] private GameObject proficiencyPanel;
+    [SerializeField] private GameObject achievementPanel;
     [SerializeField] private GameObject settingsPanel;
+
+    [Header("商店面板")]
+    [SerializeField] private ShopPanel shopPanel;
+
+    [Header("独立功能面板")]
+    [SerializeField] private GameObject marketPanel;
+    [SerializeField] private GameObject artisanPanel;
+    [SerializeField] private GameObject cookingPanel;
+    [SerializeField] private GameObject miningPanel;
+    [SerializeField] private GameObject museumPanel;
+    [SerializeField] private GameObject transportPanel;
+    [SerializeField] private GameObject communityPanel;
+    [SerializeField] private GameObject secretNotePanel;
 
     [Header("标签按钮高亮色")]
     [SerializeField] private Color tabActiveColor = new(1f, 0.85f, 0.4f);
@@ -54,7 +71,7 @@ public class UIManager : MonoBehaviour
     void Start()
     {
         // 初始化面板数组
-        _panels = new[] { inventoryPanel, equipmentPanel, mapPanel, questPanel, relationshipPanel, settingsPanel };
+        _panels = new[] { inventoryPanel, equipmentPanel, mapPanel, questPanel, relationshipPanel, proficiencyPanel, achievementPanel, settingsPanel };
 
         // 缓存 Tab 按钮的 Image 组件
         if (tabButtons != null)
@@ -67,6 +84,7 @@ public class UIManager : MonoBehaviour
         // 初始隐藏所有面板
         CloseAllPanels();
         if (menuPanel != null) menuPanel.SetActive(false);
+        CloseAllStandalonePanels();
     }
 
     void Update()
@@ -89,10 +107,11 @@ public class UIManager : MonoBehaviour
         // 标签页快捷键 (Q/E 左右切换)
         if (_isMenuOpen)
         {
+            int tabCount = System.Enum.GetValues(typeof(MenuTab)).Length;
             if (Input.GetKeyDown(KeyCode.Q))
-                SwitchTab((MenuTab)(((int)_currentTab - 1 + 6) % 6));
+                SwitchTab((MenuTab)(((int)_currentTab - 1 + tabCount) % tabCount));
             if (Input.GetKeyDown(KeyCode.E))
-                SwitchTab((MenuTab)(((int)_currentTab + 1) % 6));
+                SwitchTab((MenuTab)(((int)_currentTab + 1) % tabCount));
         }
 
         // 快捷打开独立面板（菜单未开时）
@@ -161,7 +180,8 @@ public class UIManager : MonoBehaviour
     /// <summary>通过整数索引切换（供 Button onClick 调用）</summary>
     public void SwitchTabByIndex(int index)
     {
-        if (index >= 0 && index < 6)
+        int tabCount = System.Enum.GetValues(typeof(MenuTab)).Length;
+        if (index >= 0 && index < tabCount)
             SwitchTab((MenuTab)index);
     }
 
@@ -189,6 +209,14 @@ public class UIManager : MonoBehaviour
                 var rp = relationshipPanel?.GetComponent<RelationshipPanel>();
                 if (rp != null) rp.Refresh();
                 break;
+            case MenuTab.Proficiency:
+                var pp = proficiencyPanel?.GetComponent<ProficiencyPanel>();
+                if (pp != null) pp.Refresh();
+                break;
+            case MenuTab.Achievements:
+                var ap = achievementPanel?.GetComponent<AchievementPanel>();
+                if (ap != null) ap.Refresh();
+                break;
             case MenuTab.Settings:
                 var sp = settingsPanel?.GetComponent<SettingsPanel>();
                 if (sp != null) sp.Refresh();
@@ -207,4 +235,57 @@ public class UIManager : MonoBehaviour
 
     /// <summary>获取当前标签页</summary>
     public MenuTab CurrentTab => _currentTab;
+
+    /// <summary>获取商店面板</summary>
+    public ShopPanel GetShopPanel() => shopPanel;
+
+    // ==================== 独立功能面板管理 ====================
+
+    /// <summary>打开独立面板（公共逻辑：切 Menu 状态 + 锁定输入）</summary>
+    private void OpenStandalonePanel(GameObject panel)
+    {
+        if (panel == null) return;
+        CloseAllStandalonePanels();
+        panel.SetActive(true);
+        GameManager.Instance.SetState(GameState.Menu);
+        InputManager.Instance.IsInputLocked = true;
+    }
+
+    /// <summary>关闭所有独立面板</summary>
+    public void CloseAllStandalonePanels()
+    {
+        if (marketPanel != null) marketPanel.SetActive(false);
+        if (artisanPanel != null) artisanPanel.SetActive(false);
+        if (cookingPanel != null) cookingPanel.SetActive(false);
+        if (miningPanel != null) miningPanel.SetActive(false);
+        if (museumPanel != null) museumPanel.SetActive(false);
+        if (transportPanel != null) transportPanel.SetActive(false);
+        if (communityPanel != null) communityPanel.SetActive(false);
+        if (secretNotePanel != null) secretNotePanel.SetActive(false);
+    }
+
+    /// <summary>关闭独立面板并恢复游戏</summary>
+    public void CloseStandalonePanels()
+    {
+        CloseAllStandalonePanels();
+        GameManager.Instance.SetState(GameState.Playing);
+        InputManager.Instance.IsInputLocked = false;
+    }
+
+    public void OpenMarket() => OpenStandalonePanel(marketPanel);
+    public void OpenArtisan() => OpenStandalonePanel(artisanPanel);
+
+    /// <summary>打开工匠面板并传入设备数据（显示配方）</summary>
+    public void OpenArtisan(ArtisanDeviceData deviceData)
+    {
+        OpenStandalonePanel(artisanPanel);
+        artisanPanel?.GetComponent<ArtisanPanel>()?.Setup(deviceData);
+    }
+
+    public void OpenCooking() => OpenStandalonePanel(cookingPanel);
+    public void OpenMining() => OpenStandalonePanel(miningPanel);
+    public void OpenMuseum() => OpenStandalonePanel(museumPanel);
+    public void OpenTransport() => OpenStandalonePanel(transportPanel);
+    public void OpenCommunity() => OpenStandalonePanel(communityPanel);
+    public void OpenSecretNotes() => OpenStandalonePanel(secretNotePanel);
 }

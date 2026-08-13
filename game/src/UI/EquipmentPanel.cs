@@ -19,6 +19,11 @@ public class EquipmentPanel : MonoBehaviour
     [SerializeField] private EquipmentSlotUI accessory1Slot;
     [SerializeField] private EquipmentSlotUI accessory2Slot;
 
+    [Header("龙装备槽 — GDD 6.4.2")]
+    [SerializeField] private EquipmentSlotUI dragonSaddleSlot;
+    [SerializeField] private EquipmentSlotUI dragonArmorSlot;
+    [SerializeField] private EquipmentSlotUI dragonAccessorySlot;
+
     [Header("当前武器高亮")]
     [SerializeField] private Image weaponHighlight;
 
@@ -64,6 +69,11 @@ public class EquipmentPanel : MonoBehaviour
         SetupSlot(accessory1Slot, EquipmentSlotType.Accessory1, 6);
         SetupSlot(accessory2Slot, EquipmentSlotType.Accessory2, 7);
 
+        // 龙装备槽
+        SetupDragonSlot(dragonSaddleSlot, DragonEquipmentSubType.Saddle);
+        SetupDragonSlot(dragonArmorSlot, DragonEquipmentSubType.DragonArmor);
+        SetupDragonSlot(dragonAccessorySlot, DragonEquipmentSubType.DragonAccessory);
+
         // 更新当前武器高亮
         UpdateWeaponHighlight();
 
@@ -77,6 +87,20 @@ public class EquipmentPanel : MonoBehaviour
         var slots = EquipmentManager.Instance.GetAllSlots();
         string itemId = (index < slots.Length) ? slots[index].itemId : null;
         slotUI.Setup(type, itemId, OnSlotClicked);
+    }
+
+    /// <summary>设置龙装备槽 UI</summary>
+    private void SetupDragonSlot(EquipmentSlotUI slotUI, DragonEquipmentSubType subType)
+    {
+        if (slotUI == null) return;
+        string itemId = EquipmentManager.Instance.GetDragonEquipmentId(subType);
+        slotUI.SetupDragon(subType, itemId, OnDragonSlotClicked);
+    }
+
+    /// <summary>龙装备槽点击 — 卸下</summary>
+    private void OnDragonSlotClicked(DragonEquipmentSubType subType)
+    {
+        EquipmentManager.Instance?.UnequipDragonEquipment(subType);
     }
 
     private void UpdateWeaponHighlight()
@@ -156,7 +180,42 @@ public class EquipmentPanel : MonoBehaviour
             stats += $"生命上限:  {ps.MaxHP}\n";
             stats += $"灵力上限:  {ps.MaxMP}  <color=#AA66FF>+{mag}</color>  =  {ps.MaxMP + mag}\n";
         }
+
+        // 玩家主元素
+        if (ps != null)
+        {
+            string elementName = ps.PlayerElement.HasValue
+                ? DragonElementUtils.GetElementName(ps.PlayerElement.Value)
+                : "未选择";
+            stats += $"主元素:  <color=#FFD700>{elementName}</color>\n";
+
+            // 当前武器元素匹配状态
+            var weapon = eq.GetCurrentWeaponData();
+            if (weapon != null && weapon.element.HasValue)
+            {
+                var match = EquipmentManager.CheckElementMatch(weapon, ps.PlayerElement);
+                string matchStr = match switch
+                {
+                    EquipmentMatchResult.Match => $"<color=#66FF66>匹配 (100%伤害)</color>",
+                    EquipmentMatchResult.WeaponMismatch => $"<color=#FF6666>不匹配 (50%伤害)</color>",
+                    EquipmentMatchResult.NoElement => "<color=#AAAAAA>无主元素</color>",
+                    _ => ""
+                };
+                stats += $"武器匹配:  {matchStr}\n";
+            }
+        }
+
         if (spd > 0) stats += $"移动速度:  <color=#66FF66>+{spd}</color>\n";
+
+        // 龙装备加成
+        int dragonAtk = eq.GetDragonAttackBonus();
+        int dragonDef = eq.GetDragonDefenseBonus();
+        if (dragonAtk > 0 || dragonDef > 0)
+        {
+            stats += $"\n<b>—— 龙装备 ——</b>\n";
+            if (dragonAtk > 0) stats += $"龙攻击加成:  <color=#FF6600>+{dragonAtk}</color>\n";
+            if (dragonDef > 0) stats += $"龙防御加成:  <color=#00AAFF>+{dragonDef}</color>\n";
+        }
 
         statsText.text = stats;
 
@@ -207,6 +266,33 @@ public class EquipmentSlotUI : MonoBehaviour
         {
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => onClick(_slotType));
+        }
+
+        if (string.IsNullOrEmpty(equippedItemId))
+        {
+            if (icon != null) icon.sprite = emptySlotSprite;
+            if (itemNameText != null) itemNameText.text = "空";
+            if (background != null) background.color = emptyColor;
+        }
+        else
+        {
+            var item = Resources.Load<ItemData>($"Items/{equippedItemId}");
+            if (icon != null) icon.sprite = item?.icon;
+            if (itemNameText != null) itemNameText.text = item?.itemName ?? equippedItemId;
+            if (background != null) background.color = equippedColor;
+        }
+    }
+
+    /// <summary>设置龙装备槽</summary>
+    public void SetupDragon(DragonEquipmentSubType subType, string equippedItemId, System.Action<DragonEquipmentSubType> onClick)
+    {
+        if (slotNameText != null)
+            slotNameText.text = DragonEquipmentUtils.GetSlotName(subType);
+
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => onClick(subType));
         }
 
         if (string.IsNullOrEmpty(equippedItemId))

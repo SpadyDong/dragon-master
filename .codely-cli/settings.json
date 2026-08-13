@@ -1,0 +1,34 @@
+{
+  "autoEditMemory": true,
+  "contentGenerator": {
+    "overrides": {
+      "flashModel": {
+        "authType": "openai",
+        "extra_body": {
+          "thinking": {
+            "type": "disabled"
+          }
+        },
+        "chat_template_kwargs": {
+          "enable_thinking": false,
+          "enable_reasoning": false
+        }
+      },
+      "model": {
+        "authType": "openai",
+        "extra_body": {
+          "thinking": {
+            "type": "enabled"
+          }
+        }
+      },
+      "multimodalModel": {
+        "authType": "codely-oauth"
+      }
+    }
+  },
+  "flashModel": "deepseek-v4-pro",
+  "model": "deepseek-v4-pro",
+  "selectedAuthType": "openai",
+  "multimodalModel": "codely-vl"
+}

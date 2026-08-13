@@ -181,23 +181,15 @@ public class RelationshipPanel : MonoBehaviour
     /// <summary>获取玩家对 NPC 的好感度</summary>
     private int GetPlayerAffection(string npcId)
     {
-        // 使用 NPCRelationshipManager 获取好感度
-        // 暂时返回模拟值（后续由真正的玩家好感系统提供）
-        if (NPCRelationshipManager.Instance != null)
-        {
-            // 玩家好感存储在 NPCRelationshipManager 中（M6 实现）
-        }
-        // 模拟值：基于 NPC ID hash
-        return Mathf.Abs(npcId.GetHashCode()) % 3000;
+        if (PlayerAffectionManager.Instance != null)
+            return PlayerAffectionManager.Instance.GetAffection(npcId);
+        return 0;
     }
 
-    /// <summary>好感度等级描述</summary>
+    /// <summary>好感度等级描述（委托 PlayerAffectionManager，避免阈值漂移）</summary>
     private string GetAffectionLevel(int affection)
     {
-        if (affection >= 3000) return "♥♥♥♥♥ 挚爱";
-        if (affection >= 1000) return "♥♥♥♥ 亲密";
-        if (affection >= 500) return "♥♥♥ 友好";
-        if (affection >= 200) return "♥♥ 熟悉";
-        return "♥ 陌生";
+        var level = PlayerAffectionManager.GetAffectionLevelFromValue(affection);
+        return $"{PlayerAffectionManager.GetAffectionLevelIcon(level)} {PlayerAffectionManager.GetAffectionLevelName(level)}";
     }
 }

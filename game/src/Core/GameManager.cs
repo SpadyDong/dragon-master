@@ -1,12 +1,25 @@
 using UnityEngine;
 
 /// <summary>
+/// 玩家性别 — GDD 3.1（开局选择，影响可结婚对象，仅允许异性结婚）
+/// </summary>
+public enum PlayerGender
+{
+    Male,   // 男
+    Female  // 女
+}
+
+/// <summary>
 /// 游戏全局状态管理器（单例）
 /// 管理时间、天气、金币、游戏状态等核心数据
 /// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+
+    [Header("玩家")]
+    [Tooltip("玩家性别（GDD 3.1 开局选择，影响可结婚对象）")]
+    public PlayerGender playerGender = PlayerGender.Male;
 
     [Header("时间")]
     public int year = 1;
@@ -47,6 +60,12 @@ public class GameManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    /// <summary>设置玩家性别（开局选择）</summary>
+    public void SetPlayerGender(PlayerGender gender)
+    {
+        playerGender = gender;
     }
 
     /// <summary>设置游戏状态并发布事件</summary>

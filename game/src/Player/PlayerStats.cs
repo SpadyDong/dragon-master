@@ -14,6 +14,10 @@ public class PlayerStats : MonoBehaviour
     [SerializeField] private int vitality = 5;
     [SerializeField] private int intelligence = 5;
 
+    [Header("主元素 — GDD 6.4.2")]
+    [Tooltip("玩家主元素（null=未选择，开局默认null）")]
+    [SerializeField] private DragonElement? _playerElement = null;
+
     [Header("生存四要素")]
     [SerializeField] private int currentHP = 150;
     [SerializeField] private int currentStamina = 125;
@@ -25,6 +29,17 @@ public class PlayerStats : MonoBehaviour
     public int Agility => agility;
     public int Vitality => vitality;
     public int Intelligence => intelligence;
+
+    /// <summary>玩家主元素（null=未选择）— 决定装备元素绑定</summary>
+    public DragonElement? PlayerElement
+    {
+        get => _playerElement;
+        private set
+        {
+            _playerElement = value;
+            EventBus.Publish(GameEvent.PlayerElementChanged, value.HasValue ? (int)value.Value : -1);
+        }
+    }
 
     // 最大上限（由四维属性推导）
     public int MaxHP => 100 + vitality * 10;
@@ -68,6 +83,12 @@ public class PlayerStats : MonoBehaviour
         currentStamina = MaxStamina;
         currentHunger = MaxHunger;
         currentMP = MaxMP;
+    }
+
+    /// <summary>设置玩家主元素（剧情/道具触发）</summary>
+    public void SetPlayerElement(DragonElement element)
+    {
+        PlayerElement = element;
     }
 
     void Start()
@@ -144,6 +165,20 @@ public class PlayerStats : MonoBehaviour
         if (CurrentMP < amount) return false;
         CurrentMP -= amount;
         return true;
+    }
+
+    /// <summary>恢复灵力</summary>
+    public void RestoreMP(int amount)
+    {
+        CurrentMP += amount;
+    }
+
+    /// <summary>恢复全部状态（温泉/泡澡用）— GDD 7.12</summary>
+    public void RestoreFull()
+    {
+        CurrentHP = MaxHP;
+        CurrentStamina = MaxStamina;
+        CurrentMP = MaxMP;
     }
 
     /// <summary>晕倒：强制回家，丢失部分物品</summary>

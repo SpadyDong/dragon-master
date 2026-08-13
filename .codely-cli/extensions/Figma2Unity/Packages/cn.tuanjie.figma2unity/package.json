@@ -1,0 +1,21 @@
+{
+  "name": "cn.tuanjie.figma2unity",
+  "version": "1.0.0",
+  "displayName": "Figma2Unity",
+  "description": "Figma → Unity (UGUI) 高保真导入工具：高保真渲染（Figmage 烘焙 + Vector PNG Fallback + Sprite Atlas）、增量同步、原型流（Fade 过渡 + Section 多起点路由）、Google Fonts、离线缓存。",
+  "unity": "2022.3",
+  "keywords": [
+    "figma",
+    "ugui",
+    "import",
+    "design",
+    "prototype"
+  ],
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.7",
+    "com.unity.nuget.newtonsoft-json": "3.2.2"
+  },
+  "author": {
+    "name": "Tuanjie TA / Data Platform"
+  }
+}

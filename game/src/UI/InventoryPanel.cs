@@ -127,7 +127,7 @@ public class InventoryPanel : MonoBehaviour
         return _filterMode switch
         {
             FilterMode.All => true,
-            FilterMode.Equipment => item.type == ItemType.Weapon || item.type == ItemType.Armor || item.type == ItemType.Accessory || item.type == ItemType.Tool,
+            FilterMode.Equipment => item.type == ItemType.Weapon || item.type == ItemType.Armor || item.type == ItemType.Accessory || item.type == ItemType.Tool || item.type == ItemType.DragonEquipment,
             FilterMode.Consumable => item.type == ItemType.Consumable || item.type == ItemType.Seed || item.type == ItemType.Gift,
             FilterMode.Material => item.type == ItemType.Material,
             _ => true
@@ -158,7 +158,19 @@ public class InventoryPanel : MonoBehaviour
         if (detailPanel != null) detailPanel.SetActive(true);
         if (detailIcon != null) detailIcon.sprite = item.icon;
         if (detailName != null) detailName.text = item.itemName;
-        if (detailType != null) detailType.text = GetTypeName(item.type);
+        if (detailType != null)
+        {
+            string typeStr = GetTypeName(item.type);
+            if (item.type == ItemType.Weapon)
+                typeStr += $" · {WeaponTypeStats.GetWeaponTypeName(item.weaponSubType)}";
+            else if (item.type == ItemType.DragonEquipment)
+                typeStr += $" · {DragonEquipmentUtils.GetSlotName(item.dragonEquipmentSubType)}";
+
+            if (item.element.HasValue)
+                typeStr += $" · {DragonElementUtils.GetElementName(item.element.Value)}元素";
+            typeStr += $" · {ItemData.GetQualityName(item.quality)}";
+            detailType.text = typeStr;
+        }
         if (detailDescription != null) detailDescription.text = $"{item.description}\n\n持有: {slot.count}  |  单价: {item.basePrice}文";
 
         // 属性显示
@@ -287,6 +299,7 @@ public class InventoryPanel : MonoBehaviour
             ItemType.Seed => "种子",
             ItemType.Material => "材料",
             ItemType.Gift => "礼物",
+            ItemType.DragonEquipment => "龙装备",
             _ => "其他"
         };
     }
